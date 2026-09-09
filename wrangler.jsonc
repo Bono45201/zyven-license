@@ -1,5 +1,12 @@
 {
   "name": "zyven-license",
   "main": "src/index.js",
-  "compatibility_date": "2026-09-09"
+  "compatibility_date": "2026-09-09",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "zyven-license-db",
+      "database_id": "07eeb7a5-86c3-4f23-ae5d-04ba7d4f5379"
+    }
+  ]
 }
