@@ -31,34 +31,34 @@ export default {
         });
       }
       if (method === "GET" && path === "/") return new Response("Zyven License Server");
-      if (method === "POST" && path === "/api/license/login") return login(request, env);
-      if (method === "POST" && path === "/api/license/check") return check(request, env);
-      if (method === "POST" && path === "/api/license/logout") return logout(request, env);
+      if (method === "POST" && path === "/api/license/login") return await login(request, env);
+      if (method === "POST" && path === "/api/license/check") return await check(request, env);
+      if (method === "POST" && path === "/api/license/logout") return await logout(request, env);
 
       if (path.startsWith("/api/admin/")) {
         if (!isAdmin(request, env)) return new Response(null, { status: 401 });
-        if (method === "GET" && path === "/api/admin/licenses") return adminList(request, env);
-        if (method === "GET" && path === "/api/admin/deleted") return adminDeleted(request, env);
-        if (method === "POST" && path === "/api/admin/import") return adminImport(request, env);
-        if (method === "POST" && path === "/api/admin/create") return adminCreate(request, env);
-        if (method === "POST" && path === "/api/admin/logout-all") return adminLogoutAll(request, env);
+        if (method === "GET" && path === "/api/admin/licenses") return await adminList(request, env);
+        if (method === "GET" && path === "/api/admin/deleted") return await adminDeleted(request, env);
+        if (method === "POST" && path === "/api/admin/import") return await adminImport(request, env);
+        if (method === "POST" && path === "/api/admin/create") return await adminCreate(request, env);
+        if (method === "POST" && path === "/api/admin/logout-all") return await adminLogoutAll(request, env);
 
         let m = path.match(/^\/api\/admin\/licenses\/([^/]+)\/status$/);
-        if (method === "POST" && m) return adminSetStatus(request, env, decodeURIComponent(m[1]));
+        if (method === "POST" && m) return await adminSetStatus(request, env, decodeURIComponent(m[1]));
         m = path.match(/^\/api\/admin\/licenses\/([^/]+)\/logout$/);
-        if (method === "POST" && m) return adminLogoutOne(env, decodeURIComponent(m[1]));
+        if (method === "POST" && m) return await adminLogoutOne(env, decodeURIComponent(m[1]));
         m = path.match(/^\/api\/admin\/licenses\/([^/]+)\/reset-device$/);
-        if (method === "POST" && m) return adminResetDevice(env, decodeURIComponent(m[1]));
+        if (method === "POST" && m) return await adminResetDevice(env, decodeURIComponent(m[1]));
         m = path.match(/^\/api\/admin\/licenses\/([^/]+)\/expiry$/);
-        if (method === "POST" && m) return adminSetExpiry(request, env, decodeURIComponent(m[1]));
+        if (method === "POST" && m) return await adminSetExpiry(request, env, decodeURIComponent(m[1]));
         m = path.match(/^\/api\/admin\/licenses\/([^/]+)$/);
-        if (method === "DELETE" && m) return adminDelete(env, decodeURIComponent(m[1]));
+        if (method === "DELETE" && m) return await adminDelete(env, decodeURIComponent(m[1]));
       }
 
       return textJson("Not found.", 404);
     } catch (error) {
       console.error(error);
-      return textJson("License server error.", 500);
+      return textJson(String(error?.message ?? "License server error."), 500);
     }
   }
 };
