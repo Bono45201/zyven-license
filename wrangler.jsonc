@@ -1,6 +1,6 @@
 {
   "name": "zyven-license",
-  "main": "src/index.js",
+  "main": "src/index-v5.js",
   "compatibility_date": "2026-09-09",
   "d1_databases": [
     {
