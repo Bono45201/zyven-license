@@ -1,8 +1,8 @@
 import {
   ACTIVE_SESSION_SECONDS, normalizeProduct, normalizeDevice, parseExpiry,
-  productFromQuery, readJson, textJson, json, unixNow, getPublicUrl
+  productFromQuery, readJson, textJson, json, unixNow
 } from "./config.js";
-import { parseAndVerifyLicense, fingerprintKey, signLicensePayload } from "./crypto.js";
+import { createOpaqueLicenseKey, fingerprintKey } from "./crypto.js";
 import { getLicense, registerPayload, toAdminRecord } from "./db.js";
 
 export async function adminList(request, env) {
@@ -27,25 +27,11 @@ export async function adminDeleted(request, env) {
   })));
 }
 
-export async function adminImport(request, env) {
-  const body = await readJson(request);
-  const key = String(body?.licenseKey ?? "").trim();
-  const parsed = await parseAndVerifyLicense(key);
-  if (!parsed.ok || !parsed.payload) return textJson(parsed.error, 400);
-  const p = parsed.payload;
-  if (Number(p.Version) !== 2 || String(p.Role ?? "").toUpperCase() !== "CUSTOMER")
-    return textJson("Only server-managed v2 CUSTOMER keys can be imported here.", 400);
-  const requested = body?.product ? normalizeProduct(body.product, false) : normalizeProduct(p.Product, false);
-  if (!requested || requested !== normalizeProduct(p.Product, false))
-    return textJson("The requested product does not match the signed key.", 400);
-  const result = await registerPayload(env, p, await fingerprintKey(key));
-  if (!result.ok) return textJson(result.error, 400);
-  return json(toAdminRecord(result.row, 0));
+export async function adminImport() {
+  return textJson("Import is disabled for server-generated ZYV2 keys. Create a new key from the Owner Manager instead.", 400);
 }
 
 export async function adminCreate(request, env) {
-  if (!env.ZYVEN_PRIVATE_KEY_PEM_B64)
-    return textJson("Private signing key is missing on the license server.", 400);
   const body = await readJson(request);
   const product = normalizeProduct(body?.product, true);
   if (!product) return textJson("Unsupported product.", 400);
@@ -57,13 +43,17 @@ export async function adminCreate(request, env) {
   const deviceId = normalizeDevice(body?.deviceId);
   if (deviceId === null) return textJson("Device ID must be AUTO, *, or a valid Zyven device ID.", 400);
 
+  const licenseId = crypto.randomUUID().replaceAll("-", "").toUpperCase();
+  const key = createOpaqueLicenseKey(licenseId);
   const payload = {
-    Version: 2, Product: product, Customer: customer || "Zyven User", Role: "CUSTOMER",
-    Plan: plan || "Lifetime", DeviceId: deviceId,
-    LicenseId: crypto.randomUUID().replaceAll("-", "").toUpperCase(),
-    IssuedUtc: unixNow(), ExpiresUtc: expiry, ServerUrl: getPublicUrl(request, env)
+    Product: product,
+    Customer: customer || "Zyven User",
+    Role: "CUSTOMER",
+    Plan: plan || "Lifetime",
+    DeviceId: deviceId,
+    LicenseId: licenseId,
+    ExpiresUtc: expiry
   };
-  const key = await signLicensePayload(payload, env.ZYVEN_PRIVATE_KEY_PEM_B64);
   const result = await registerPayload(env, payload, await fingerprintKey(key));
   if (!result.ok || !result.row) return textJson(result.error || "Could not register license.", 400);
   return json({ licenseKey: key, record: toAdminRecord(result.row, 0) });
