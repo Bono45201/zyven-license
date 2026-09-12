@@ -1,17 +1,7 @@
-export const SERVER_VERSION = "5.0.3-cf1";
+export const SERVER_VERSION = "5.1.0-cf1";
 export const ACTIVE_SESSION_SECONDS = 45;
 export const DEFAULT_PRODUCT = "ZYVEN-SOUND-TOOL";
 export const SUPPORTED_PRODUCTS = new Set(["ZYVEN-SOUND-TOOL", "ZYVEN-GP-TOOL"]);
-
-export const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvaUZkM2Bo8MIq84qGZs5
-lVx1PpU46GLtwI4nc0UfikVSRFZ6nT1U1MGsG4hEx+MqDJcK52rI9OR7RCvIIqL5
-bUVEB7WWO38eyIsW3FOy0nDL3J+n2YPpJJx6Cvex27yd8Jjl6OBZe6z+jClsJ07Z
-6LktPVUENrmkM+IYHuHZOs0Qw7TQuvkCzGKFZfOvZM4e39lzRUZnjIBhH9UoiRrf
-fJ357iy1+OjO39wj+h7rzFLiqaqnkJm14GX2C0kWn4CgQV00ywNKapQS1+NnM3zr
-lcljVB+xykWjWyIiDQJC2oenl8ewifY5av4F0tKY57OMzzkyf2IX8zgCMDqJLRvf
-8wIDAQAB
------END PUBLIC KEY-----`;
 
 export const enc = new TextEncoder();
 export const dec = new TextDecoder();
