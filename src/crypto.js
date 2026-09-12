@@ -1,7 +1,9 @@
 import { PUBLIC_KEY_PEM, enc, dec, normalizeProduct } from "./config.js";
 
 function base64ToBytes(value) {
-  const bin = atob(value);
+  const clean = String(value ?? "").replace(/\s+/g, "");
+  if (!clean) throw new Error("Base64 value is empty.");
+  const bin = atob(clean);
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
@@ -17,10 +19,35 @@ function bytesToBase64Url(bytes) {
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 function pemBodyToBytes(pem, label) {
-  return base64ToBytes(String(pem)
-    .replace(`-----BEGIN ${label}-----`, "")
-    .replace(`-----END ${label}-----`, "")
+  const text = String(pem ?? "").trim();
+  const begin = `-----BEGIN ${label}-----`;
+  const end = `-----END ${label}-----`;
+  if (!text.includes(begin) || !text.includes(end))
+    throw new Error(`Expected a valid ${label} PEM value.`);
+  return base64ToBytes(text
+    .replace(begin, "")
+    .replace(end, "")
     .replace(/\s+/g, ""));
+}
+
+function decodePrivatePemSecret(secret) {
+  const raw = String(secret ?? "").trim();
+  if (!raw) throw new Error("ZYVEN_PRIVATE_KEY_PEM_B64 secret is missing.");
+
+  // Allow Cloudflare secret to contain the PEM directly. This is easier to maintain
+  // and also remains compatible with the older base64-encoded PEM format.
+  if (raw.includes("-----BEGIN PRIVATE KEY-----")) return raw;
+
+  try {
+    const decoded = dec.decode(base64ToBytes(raw)).trim();
+    if (!decoded.includes("-----BEGIN PRIVATE KEY-----"))
+      throw new Error("Decoded secret is not a PKCS#8 private key PEM.");
+    return decoded;
+  } catch (e) {
+    throw new Error(
+      "ZYVEN_PRIVATE_KEY_PEM_B64 is not a valid private signing key. Store either the full PKCS#8 PEM or its base64 encoding in Cloudflare Secrets."
+    );
+  }
 }
 
 export async function parseAndVerifyLicense(key) {
@@ -47,11 +74,16 @@ export async function parseAndVerifyLicense(key) {
   }
 }
 
-export async function signLicensePayload(payload, privatePemB64) {
-  const pemText = dec.decode(base64ToBytes(String(privatePemB64).trim()));
-  const key = await crypto.subtle.importKey(
-    "pkcs8", pemBodyToBytes(pemText, "PRIVATE KEY"),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+export async function signLicensePayload(payload, privatePemSecret) {
+  const pemText = decodePrivatePemSecret(privatePemSecret);
+  let key;
+  try {
+    key = await crypto.subtle.importKey(
+      "pkcs8", pemBodyToBytes(pemText, "PRIVATE KEY"),
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  } catch {
+    throw new Error("The Zyven private signing key in Cloudflare is not a valid PKCS#8 RSA private key.");
+  }
   const bytes = enc.encode(JSON.stringify(payload));
   const sig = new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, bytes));
   return `ZYV1.${bytesToBase64Url(bytes)}.${bytesToBase64Url(sig)}`;
