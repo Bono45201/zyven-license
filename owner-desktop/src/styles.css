@@ -1886,3 +1886,8 @@ button:disabled {
     width: 220px;
   }
 }
+
+
+.expired-text {
+  color: #ff8f8f !important;
+}
