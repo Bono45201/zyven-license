@@ -22,7 +22,8 @@ import {
   formatDateUnix,
   maskFingerprint,
   productName,
-  sessionText
+  sessionText,
+  isExpired
 } from "../lib/format";
 
 type ViewMode = "active" | "deleted";
@@ -76,7 +77,10 @@ export default function LicensesPage({
     const q = query.trim().toLowerCase();
     return records.filter((record) => {
       if (scope && record.Product !== scope) return false;
-      if (status && String(record.Status).toUpperCase() !== status) return false;
+      const effectiveStatus = isExpired(record.ExpiresUtc)
+        ? "EXPIRED"
+        : String(record.Status).toUpperCase();
+      if (status && effectiveStatus !== status) return false;
       if (!q) return true;
       return [
         record.Customer,
@@ -157,6 +161,7 @@ export default function LicensesPage({
                 <option value="ACTIVE">Active</option>
                 <option value="PAUSED">Paused</option>
                 <option value="REVOKED">Revoked</option>
+                <option value="EXPIRED">Expired</option>
               </select>
             </div>
           ) : null}
@@ -257,7 +262,14 @@ export default function LicensesPage({
                     <div><span>Plan</span><strong>{selected.Plan || "Lifetime"}</strong></div>
                     <div><span>Device / HWID</span><strong className="mono">{selected.DeviceId || "AUTO"}</strong></div>
                     <div><span>Session</span><strong>{sessionText(selected)}</strong></div>
-                    <div><span>Expiry</span><strong>{expiryText(selected.ExpiresUtc)}</strong></div>
+                    <div>
+                      <span>Expiry</span>
+                      <strong className={isExpired(selected.ExpiresUtc) ? "expired-text" : ""}>
+                        {isExpired(selected.ExpiresUtc)
+                          ? "Expired · " + expiryText(selected.ExpiresUtc)
+                          : expiryText(selected.ExpiresUtc)}
+                      </strong>
+                    </div>
                     <div><span>Created</span><strong>{formatDateUnix(selected.CreatedUtc, true)}</strong></div>
                     <div><span>Last seen</span><strong>{formatDateUnix(selected.LastSeenUtc, true)}</strong></div>
                     <div><span>Fingerprint</span><strong className="mono">{maskFingerprint(selected.Fingerprint)}</strong></div>
