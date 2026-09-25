@@ -1,4 +1,4 @@
-export const SERVER_VERSION = "5.1.0-cf1";
+export const SERVER_VERSION = "5.2.0-cf1";
 export const ACTIVE_SESSION_SECONDS = 45;
 export const DEFAULT_PRODUCT = "ZYVEN-SOUND-TOOL";
 export const SUPPORTED_PRODUCTS = new Set(["ZYVEN-SOUND-TOOL", "ZYVEN-GP-TOOL"]);
