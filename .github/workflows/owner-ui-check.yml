@@ -1,0 +1,32 @@
+name: Owner UI Check
+
+on:
+  push:
+    branches:
+      - owner-unified-ui
+    paths:
+      - "owner-desktop/**"
+      - ".github/workflows/owner-ui-check.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: owner-desktop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: owner-desktop/package.json
+
+      - name: Install
+        run: npm install
+
+      - name: Build renderer
+        run: npm run build
