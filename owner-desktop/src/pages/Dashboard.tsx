@@ -11,7 +11,7 @@ import {
 import MetricCard from "../components/MetricCard";
 import StatusPill from "../components/StatusPill";
 import type { LicenseRecord, PageId, ProductScope } from "../types";
-import { expiryText, formatDateUnix, productName, productScopeRecords, sessionText } from "../lib/format";
+import { expiryText, formatDateUnix, productName, productScopeRecords, sessionText, isExpired } from "../lib/format";
 
 export default function Dashboard({
   records,
@@ -27,10 +27,13 @@ export default function Dashboard({
   onLogoutAll: () => void;
 }) {
   const scoped = productScopeRecords(records, scope);
-  const active = scoped.filter((x) => String(x.Status).toUpperCase() === "ACTIVE").length;
+  const active = scoped.filter((x) =>
+    String(x.Status).toUpperCase() === "ACTIVE" && !isExpired(x.ExpiresUtc)
+  ).length;
   const online = scoped.filter((x) => Number(x.ActiveSessions || 0) > 0).length;
   const paused = scoped.filter((x) => String(x.Status).toUpperCase() === "PAUSED").length;
   const revoked = scoped.filter((x) => String(x.Status).toUpperCase() === "REVOKED").length;
+  const expired = scoped.filter((x) => isExpired(x.ExpiresUtc)).length;
   const recent = [...scoped].sort((a, b) => Number(b.CreatedUtc) - Number(a.CreatedUtc)).slice(0, 7);
 
   const sound = records.filter((x) => x.Product === "ZYVEN-SOUND-TOOL");
@@ -76,8 +79,8 @@ export default function Dashboard({
         />
         <MetricCard
           label="RESTRICTED"
-          value={paused + revoked}
-          note={paused + " paused · " + revoked + " revoked"}
+          value={paused + revoked + expired}
+          note={paused + " paused · " + revoked + " revoked · " + expired + " expired"}
           icon={<ShieldAlert size={18} />}
         />
       </section>
@@ -102,7 +105,7 @@ export default function Dashboard({
               <div className="product-summary-stats">
                 <div><strong>{sound.length}</strong><span>Licenses</span></div>
                 <div><strong>{sound.filter((x) => x.ActiveSessions > 0).length}</strong><span>Online</span></div>
-                <div><strong>{sound.filter((x) => x.Status === "ACTIVE").length}</strong><span>Active</span></div>
+                <div><strong>{sound.filter((x) => x.Status === "ACTIVE" && !isExpired(x.ExpiresUtc)).length}</strong><span>Active</span></div>
               </div>
             </div>
 
@@ -117,7 +120,7 @@ export default function Dashboard({
               <div className="product-summary-stats">
                 <div><strong>{gp.length}</strong><span>Licenses</span></div>
                 <div><strong>{gp.filter((x) => x.ActiveSessions > 0).length}</strong><span>Online</span></div>
-                <div><strong>{gp.filter((x) => x.Status === "ACTIVE").length}</strong><span>Active</span></div>
+                <div><strong>{gp.filter((x) => x.Status === "ACTIVE" && !isExpired(x.ExpiresUtc)).length}</strong><span>Active</span></div>
               </div>
             </div>
           </div>
