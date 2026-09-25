@@ -1,0 +1,27 @@
+name: License API Check
+
+on:
+  push:
+    branches:
+      - owner-unified-ui
+    paths:
+      - "src/**"
+      - ".github/workflows/license-api-check.yml"
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check license server JavaScript
+        run: |
+          node --check src/index-v5.js
+          node --check src/config.js
+          node --check src/admin.js
+          node --check src/db.js
+          node --check src/crypto.js
