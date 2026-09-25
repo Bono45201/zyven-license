@@ -1,0 +1,22 @@
+name: Owner Source Artifact
+
+on:
+  push:
+    branches:
+      - owner-unified-ui
+    paths:
+      - ".github/workflows/owner-source-artifact.yml"
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload Owner source
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zyven-Owner-Source-v2.0.0
+          path: owner-desktop
+          if-no-files-found: error
