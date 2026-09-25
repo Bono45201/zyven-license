@@ -11,6 +11,25 @@ import {
   adminDelete, adminLogoutOne, adminLogoutAll, adminResetDevice, adminSetExpiry
 } from "./admin.js";
 
+function customerMeta(row, now = unixNow()) {
+  if (!row) return {
+    expiresUtc: 0,
+    expiryMode: "UNKNOWN",
+    serverNowUtc: now
+  };
+
+  const expiresUtc = Number(row.expires_utc ?? 0);
+  return {
+    expiresUtc,
+    expiryMode: expiresUtc > 0 ? "DATE" : "LIFETIME",
+    plan: String(row.plan ?? ""),
+    deviceId: String(row.device_id ?? ""),
+    createdUtc: Number(row.created_utc ?? 0),
+    lastSeenUtc: Number(row.last_seen_utc ?? 0),
+    serverNowUtc: now
+  };
+}
+
 export default {
   async fetch(request, env) {
     try {
@@ -66,10 +85,19 @@ export default {
 async function login(request, env) {
   const body = await readJson(request);
   const v = await validateLicense(env, body?.licenseKey, body?.deviceId, body?.product);
-  if (!v.allowed || !v.row)
-    return json({ allowed: false, status: v.status, message: v.message, product: v.product || "", sessionToken: "" });
-
   const now = unixNow();
+
+  if (!v.allowed || !v.row) {
+    return json({
+      allowed: false,
+      status: v.status,
+      message: v.message,
+      product: v.product || "",
+      sessionToken: "",
+      ...customerMeta(v.row, now)
+    });
+  }
+
   await env.DB.prepare(`
     UPDATE licenses
     SET session_version=session_version+1, session_last_seen_utc=?, last_seen_utc=?
@@ -79,23 +107,43 @@ async function login(request, env) {
   const row = await getLicense(env, v.row.license_id);
   const token = await createSessionToken(env, row.product, row.license_id, v.deviceId, Number(row.session_version));
   return json({
-    allowed: true, status: "ACTIVE", message: "License active.",
-    product: row.product, licenseId: row.license_id, sessionToken: token
+    allowed: true,
+    status: "ACTIVE",
+    message: "License active.",
+    product: row.product,
+    licenseId: row.license_id,
+    sessionToken: token,
+    ...customerMeta(row, now)
   });
 }
 
 async function check(request, env) {
   const body = await readJson(request);
   const v = await validateLicense(env, body?.licenseKey, body?.deviceId, body?.product);
-  if (!v.allowed || !v.row)
-    return json({ allowed: false, status: v.status, message: v.message, product: v.product || "" });
+  const now = unixNow();
+
+  if (!v.allowed || !v.row) {
+    return json({
+      allowed: false,
+      status: v.status,
+      message: v.message,
+      product: v.product || "",
+      ...customerMeta(v.row, now)
+    });
+  }
 
   const token = String(body?.sessionToken ?? "").trim();
   const ok = await validateSessionToken(env, token, v.row.product, v.row.license_id, v.deviceId, Number(v.row.session_version));
-  if (!ok)
-    return json({ allowed: false, status: "SESSION_EXPIRED", message: "Your Zyven session ended. Sign in again.", product: v.row.product });
+  if (!ok) {
+    return json({
+      allowed: false,
+      status: "SESSION_EXPIRED",
+      message: "Your Zyven session ended. Sign in again.",
+      product: v.row.product,
+      ...customerMeta(v.row, now)
+    });
+  }
 
-  const now = unixNow();
   await env.DB.prepare(`
     UPDATE licenses
     SET session_last_seen_utc=?,
@@ -103,7 +151,15 @@ async function check(request, env) {
     WHERE license_id=?
   `).bind(now, now, now, v.row.license_id).run();
 
-  return json({ allowed: true, status: "ACTIVE", message: "License active.", product: v.row.product });
+  const row = await getLicense(env, v.row.license_id);
+  return json({
+    allowed: true,
+    status: "ACTIVE",
+    message: "License active.",
+    product: row.product,
+    licenseId: row.license_id,
+    ...customerMeta(row, now)
+  });
 }
 
 async function logout(request, env) {
