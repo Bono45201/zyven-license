@@ -1,7 +1,7 @@
 {
   "name": "zyven-owner-manager",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Zyven Owner License Manager",
   "main": "electron/main.cjs",
   "author": "Zyven",
@@ -42,7 +42,9 @@
       "target": [
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
